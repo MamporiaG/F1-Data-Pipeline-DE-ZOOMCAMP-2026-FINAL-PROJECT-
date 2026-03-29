@@ -1,0 +1,143 @@
+##############################################################
+# dbt/models/staging/schema.yml
+#
+# Two sections:
+#   sources  — registers f1_raw BigQuery tables as dbt sources
+#   models   — column descriptions and tests for staging models
+##############################################################
+
+version: 2
+
+# ── Sources ───────────────────────────────────────────────────────────────────
+# "sources" tell dbt where raw data lives. This lets you use
+# {{ source('f1_raw', 'drivers') }} in SQL instead of hardcoding
+# project/dataset names — and it gives you source freshness checks.
+sources:
+  - name: f1_raw
+    database: "{{ env_var('GCP_PROJECT_ID') }}"
+    schema: f1_raw
+    description: "Raw F1 data loaded from GCS by Airflow dag_2_gcs_to_bigquery."
+    tables:
+      - name: circuits
+        description: "All F1 circuits — 77 tracks across 34 countries."
+      - name: constructors
+        description: "All F1 constructors (teams) — 210 total."
+      - name: constructor_results
+        description: "Points scored by each constructor per race."
+      - name: constructor_standings
+        description: "Constructor championship standings snapshot after each race."
+      - name: drivers
+        description: "All F1 drivers — 858 total from 1950 to 2024."
+      - name: driver_standings
+        description: "Driver championship standings snapshot after each race."
+      - name: lap_times
+        description: "Individual lap times per driver per race. Large table (~500K rows)."
+      - name: pit_stops
+        description: "Pit stop records — lap number, duration, timestamp."
+      - name: qualifying
+        description: "Q1/Q2/Q3 qualifying times per driver per race."
+      - name: races
+        description: "Every race event — date, circuit, season, round number."
+      - name: results
+        description: "Race results — finish position, points, fastest lap per driver per race."
+      - name: seasons
+        description: "Season-level metadata — one row per year."
+      - name: status
+        description: "Lookup table for race finish status (Finished, Retired, Accident, etc.)."
+
+# ── Staging model tests ───────────────────────────────────────────────────────
+models:
+
+  - name: stg_circuits
+    description: "Cleaned circuits — one row per circuit."
+    columns:
+      - name: circuit_id
+        tests: [unique, not_null]
+      - name: circuit_name
+        tests: [not_null]
+      - name: country
+        tests: [not_null]
+
+  - name: stg_constructors
+    description: "Cleaned constructors (teams) — one row per team."
+    columns:
+      - name: constructor_id
+        tests: [unique, not_null]
+      - name: constructor_name
+        tests: [not_null]
+
+  - name: stg_drivers
+    description: "Cleaned drivers — one row per driver."
+    columns:
+      - name: driver_id
+        tests: [unique, not_null]
+      - name: full_name
+        tests: [not_null]
+      - name: nationality
+        tests: [not_null]
+
+  - name: stg_races
+    description: "Cleaned race events — one row per race."
+    columns:
+      - name: race_id
+        tests: [unique, not_null]
+      - name: season_year
+        tests: [not_null]
+      - name: circuit_id
+        tests: [not_null]
+
+  - name: stg_results
+    description: "Cleaned race results — one row per driver per race."
+    columns:
+      - name: result_id
+        tests: [unique, not_null]
+      - name: race_id
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_races')
+              field: race_id
+      - name: driver_id
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_drivers')
+              field: driver_id
+      - name: constructor_id
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_constructors')
+              field: constructor_id
+
+  - name: stg_driver_standings
+    description: "Driver championship points after each race round."
+    columns:
+      - name: standing_id
+        tests: [unique, not_null]
+
+  - name: stg_constructor_standings
+    description: "Constructor championship points after each race round."
+    columns:
+      - name: standing_id
+        tests: [unique, not_null]
+
+  - name: stg_qualifying
+    description: "Qualifying session times per driver per race."
+    columns:
+      - name: qualify_id
+        tests: [unique, not_null]
+
+  - name: stg_pit_stops
+    description: "Pit stop records — one row per stop."
+    columns:
+      - name: race_id
+        tests: [not_null]
+      - name: driver_id
+        tests: [not_null]
+
+  - name: stg_status
+    description: "Lookup: race finish status codes."
+    columns:
+      - name: status_id
+        tests: [unique, not_null]

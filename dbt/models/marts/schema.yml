@@ -1,0 +1,68 @@
+version: 2
+
+models:
+
+  - name: fct_race_results
+    description: >
+      Primary fact table. One row per driver per race.
+      Joins all context (race, driver, constructor, circuit, status).
+      ~26,000 rows. Main table for Looker Studio dashboards.
+    columns:
+      - name: result_id
+        tests: [unique, not_null]
+      - name: race_id
+        tests: [not_null]
+      - name: driver_id
+        tests: [not_null]
+      - name: season_year
+        tests: [not_null]
+      - name: points_scored
+        tests: [not_null]
+
+  - name: fct_driver_standings
+    description: >
+      Driver championship standings snapshot after every race.
+      One row per driver per race. Use for championship race charts.
+    columns:
+      - name: standing_id
+        tests: [unique, not_null]
+      - name: season_year
+        tests: [not_null]
+      - name: championship_position
+        tests: [not_null]
+
+  - name: fct_constructor_standings
+    description: >
+      Constructor championship standings snapshot after every race.
+    columns:
+      - name: standing_id
+        tests: [unique, not_null]
+
+  - name: dim_drivers
+    description: >
+      One row per driver with aggregated career statistics.
+      Use for leaderboards, driver cards, and nationality breakdowns.
+    columns:
+      - name: driver_id
+        tests: [unique, not_null]
+      - name: total_wins
+        tests: [not_null]
+      - name: total_races
+        tests: [not_null]
+
+  - name: dim_constructors
+    description: >
+      One row per constructor with aggregated career statistics.
+    columns:
+      - name: constructor_id
+        tests: [unique, not_null]
+
+  - name: dim_circuits
+    description: >
+      One row per circuit, enriched with race count and most successful
+      driver/constructor. Includes lat/lng for map visualisations.
+    columns:
+      - name: circuit_id
+        tests: [unique, not_null]
+      - name: circuit_name
+        tests: [not_null]

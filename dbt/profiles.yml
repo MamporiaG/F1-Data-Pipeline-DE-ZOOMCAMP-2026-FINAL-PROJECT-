@@ -1,0 +1,31 @@
+##############################################################
+# dbt/profiles.yml
+# Tells dbt how to connect to BigQuery
+##############################################################
+
+f1_pipeline:
+  target: dev
+
+  outputs:
+
+    dev:
+      type: bigquery
+      method: service-account
+      project: "{{ env_var('GCP_PROJECT_ID') }}"
+      dataset: f1          # <--- CHANGED FROM f1_staging
+      keyfile: "{{ env_var('GOOGLE_APPLICATION_CREDENTIALS') }}"
+      threads: 4
+      timeout_seconds: 300
+      location: US
+      priority: interactive
+
+    prod:
+      type: bigquery
+      method: service-account
+      project: "{{ env_var('GCP_PROJECT_ID') }}"
+      dataset: f1          # <--- CHANGED FROM f1_staging
+      keyfile: "{{ env_var('GOOGLE_APPLICATION_CREDENTIALS') }}"
+      threads: 4
+      timeout_seconds: 600
+      location: US
+      priority: interactive
